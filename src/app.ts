@@ -1,11 +1,24 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import apiRoutes from './routes/api';
 
 const app: Application = express();
 
 // Konfigurasi Middlewares Express
-app.use(cors());
+// Mengizinkan credentials agar cookie sesi dapat dikirim dari antarmuka Next.js
+app.use(cors({
+    origin: (origin, callback) => {
+        // Mengizinkan localhost/dev origin dan request tanpa origin (seperti Postman/cURL)
+        callback(null, true);
+    },
+    credentials: true,
+}));
+
+// Cookie Parser untuk membaca HttpOnly session cookies (Pertemuan 9 — Langkah 2)
+app.use(cookieParser());
+
+// Parser body JSON dan URL-encoded
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

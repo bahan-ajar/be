@@ -5,8 +5,8 @@ import sequelize from './db/config/database';
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.get('/', (req: Request, res: Response) => {
-    res.send('Backend Express (TypeScript) Berhasil Berjalan!');
+app.get("/", (req, res) => {
+    res.send("Selamat, BE berjalan!");
 });
 
 app.listen(port, () => {

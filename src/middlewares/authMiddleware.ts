@@ -3,54 +3,61 @@ import jwt from 'jsonwebtoken';
 import { JwtUserPayload } from '../types';
 
 /**
- * Middleware untuk mengekstrak token JWT dari header Authorization
- * dan menyimpan ID pengguna ke dalam res.locals.userId
+ * Pertemuan 9 — Langkah 2 & 3: Middleware Authentication
+ * Mengekstrak token dari HTTP-only cookie atau Authorization header.
+ * Memverifikasi validitas token dan menyimpan identitas user.
  */
 export const authMiddleware = (req: Request, res: Response, next: NextFunction): void => {
-    const authHeader = req.headers.authorization;
+    let token: string | undefined;
 
-    if (!authHeader) {
+    // 1. Cek dari HTTP-only cookie
+    if (req.cookies && (req.cookies.token || req.cookies.session)) {
+        token = req.cookies.token || req.cookies.session;
+    }
+
+    // 2. Cek dari Authorization Header (Bearer token)
+    if (!token && req.headers.authorization) {
+        const parts = req.headers.authorization.split(' ');
+        if (parts.length === 2 && parts[0] === 'Bearer') {
+            token = parts[1];
+        }
+    }
+
+    // Jika token tidak ditemukan sama sekali -> 401 Unauthorized
+    if (!token) {
         res.status(401).json({
             success: false,
-            message: 'Akses ditolak. Token otorisasi tidak ditemukan.',
+            message: 'Akses ditolak. Silakan login terlebih dahulu untuk melanjutkan.',
         });
         return;
     }
 
-    // Format yang diharapkan: Bearer <token>
-    const parts = authHeader.split(' ');
-    if (parts.length !== 2 || parts[0] !== 'Bearer') {
-        res.status(401).json({
-            success: false,
-            message: 'Format token tidak valid. Gunakan format "Bearer <token>".',
-        });
-        return;
-    }
-
-    const token = parts[1];
     const secret = process.env.JWT_SECRET || 'rahasia_super_aman_jwt_secret_key_12345';
 
     try {
         const decoded = jwt.verify(token, secret) as JwtUserPayload;
 
-        // Simpan ID pengguna ke dalam res.locals.userId sesuai instruksi
+        // Pasang user ke res.locals dan req untuk controller selanjutnya
         res.locals.userId = decoded.id;
         res.locals.user = decoded;
+        (req as any).user = decoded;
 
         next();
     } catch (error: any) {
         if (error.name === 'TokenExpiredError') {
             res.status(401).json({
                 success: false,
-                message: 'Token telah kedaluwarsa. Silakan login kembali.',
+                message: 'Sesi Anda telah berakhir. Silakan login kembali.',
             });
             return;
         }
 
         res.status(401).json({
             success: false,
-            message: 'Token tidak valid atau gagal diverifikasi.',
+            message: 'Token otentikasi tidak valid atau sudah kedaluwarsa.',
         });
         return;
     }
 };
+
+export default authMiddleware;
